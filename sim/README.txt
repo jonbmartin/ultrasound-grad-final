@@ -1,0 +1,13 @@
+READ ME
+
+The following supplemental m-files are provided to assist the readers of IEEE UFFC in implementing passive cavitation imaging.  Two m-files are provided:
+
+PCIBeamforming_Experiment.m:  This m-file defines the necessary parameters to form a passive cavitation image, loads sample experimental data (ExpData.mat), performs the passive cavitation imaging beamforming, and provides output plots.  The file can be run from the MATLAB command window or the m-file can be opened and each section run independently.  Beamforming can be performed at the insonation (fundamental) frequency of 6 MHz and at the subharmonic (3 MHz).
+
+PCIBeamforming_Simulation.m:  This m-file defines the necessary parameters to form a passive cavitation image using simulated data.  The simulated data can either be loaded (SimData.mat) or created de novo.  The code also creates output plots.  The file can be run from the MATLAB command window or the m-file can be opened and each section run independently.  Beamforming can be performed at the insonation (fundamental) frequency of 6 MHz.
+
+Further details about each m-file are provided as comments within the m-files.  We encourage the user to read these comments before implementing the algorithm.
+
+Citations: 
+Haworth KJ, Mast TD, Radhakrishnan K, Burgess MT, Kopechek JA, Huang S-L, McPherson DD, Holland CK. Passive imaging with pulsed ultrasound insonations. J Acoust Soc Am Acoustical Society of America, 2012;132:544-553.    
+Haworth KJ, Bader KB, Rich KT, Holland CK, Mast TD. Quantitative Frequency-Domain Passive Cavitation Imaging. IEEE UFFC. DOI: 10.1109/TUFFC.2016.2620492 

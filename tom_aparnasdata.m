@@ -90,47 +90,47 @@ shifted =zeros(TotalTimeI,length(Aperture)); %temp var, holds delayed channel da
 powIm = zeros(length(zloc),length(xloc));
 h = waitbar(0,'applying delay');
 
-%for i=1:length(xloc) % lateral position
-for i=26:33
-    %for j=1:length(zloc) %axial position
-    for j=5:20
+for i=1:length(xloc) % lateral position
+%for i=26:33
+    for j=1:length(zloc) %axial position
+    %for j=5:20
         for e=1:length(Aperture) %element
             shifted(:,e) = Sl*interp1(Time',RData(:,e),Time'+tof(j,i,e));
         end
         % account for angular sensitivity (cosine apodization)
         cosmat = repmat(squeeze(costheta(j,i,:))',[TotalTimeI,1]); % Form cosine apodization matrix if applying cosine apodization
-        shifted = shifted.*cosmat;      % Apply cosine apodization
-
-        % find optimal weights using linprog
-        X = shifted';
-        X(isnan(X))=0;
-        X = double(X);
-        N = TotalTimeI;
-        M = 128;
-        sig = .8; %.04 up to .7 have pretty good results % no sln at 1
-        
-        u = optimvar('u');
-        w = optimvar('w',M);
-        r = optimvar('r');
-        tom = optimvar('tom');
-        prob = optimproblem('Objective',u,'ObjectiveSense','min');
-        prob.Constraints.c1 = X'*w >= -u.*ones([N 1]);
-        prob.Constraints.c2 = X'*w <= u.*ones([N 1]);
-        prob.Constraints.c3 = w >= 1 + sig*r*ones([M 1]);
-        prob.Constraints.c4 = -r*ones([M 1]) <= w;
-        prob.Constraints.c5 = w <= r*ones([M 1]);
-
-        problem = prob2struct(prob);
-
-        [sol,fval,exitflag,output] = linprog(problem);
-        
-        % apply weights
-        if exitflag==1 %it worked
-            weights = repmat((sol(2:2+128-1)./sol(1))',[N 1]);
-        else
-            weights = ones([N M]);
-        end
-        shifted = shifted.*weights;
+%         shifted = shifted.*cosmat;      % Apply cosine apodization
+% 
+%         % find optimal weights using linprog
+%         X = shifted';
+%         X(isnan(X))=0;
+%         X = double(X);
+%         N = TotalTimeI;
+%         M = 128;
+%         sig = .5; %.04 up to .8 have pretty good results % no sln at 1
+%         
+%         u = optimvar('u');
+%         w = optimvar('w',M);
+%         r = optimvar('r');
+%         tom = optimvar('tom');
+%         prob = optimproblem('Objective',u,'ObjectiveSense','min');
+%         prob.Constraints.c1 = X'*w >= -u.*ones([N 1]);
+%         prob.Constraints.c2 = X'*w <= u.*ones([N 1]);
+%         prob.Constraints.c3 = w >= 1 + sig*r*ones([M 1]);
+%         prob.Constraints.c4 = -r*ones([M 1]) <= w;
+%         prob.Constraints.c5 = w <= r*ones([M 1]);
+% 
+%         problem = prob2struct(prob);
+% 
+%         [sol,fval,exitflag,output] = linprog(problem);
+%         
+%         % apply weights
+%         if exitflag==1 %it worked
+%             weights = repmat((sol(2:2+128-1)./sol(1))',[N 1]);
+%         else
+%             weights = ones([N M]);
+%         end
+%         shifted = shifted.*weights;
         
         % sum
         latsum = abs(sum(shifted,2,'omitnan')).^2 - 0;

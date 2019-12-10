@@ -74,42 +74,7 @@ for i=1:length(xloc) % lateral position
     end
 end
 shifted(isnan(shifted))=0;
-shifted = shifted'; % just transpose to be consistent with paper notation
-R = shifted * shifted';
-
-%% Now perform RCB
-eps = 20;
-
-for ii = 1:length(xloc)
-    for kk = 1:length(zloc)
-        times = round(squeeze(tof(kk,ii,:)) / (1/(fs))) + 1; % convert time to corresponding pixel indices
-        time2ind = times - min(times) + 1; %perform shift
-        dist_v = squeeze(d(ii,kk,:));
-        shifted_data = zeros(128, size(RData,1) + 1);
-        for jj = 1:nChannels
-            shifted_data(jj,:) = shifted_data(jj,:) + RData(jj,1+time2ind(jj):end) zeros(1, time2ind(jj)+1)]; % shift the pixels up by the number calculated in time2ind and zero pad rest
-        end
-        
-        R = double(shifted_data * shifted_data'); % calculate covariance Rs
-        [U, L] = eig(R);
-        z_sumsq = transpose(U)*abar;
-        
-        lam_max = (norm(abar)-sqrt(eps))/(L(128,128)*sqrt(eps));
-        lam_min = (norm(abar)-sqrt(eps))/(L(1,1)*sqrt(eps));
-        lam0 = [lam_min lam_max]; %initial lambda interval
-        fun = @(lam)sum(z_sumsq.^2./((1+(lam*L)).^2))-eps; % eqn (24)
-        lam = lsqnonlin(fun,(lam_min+lam_max)/2,lam_min,lam_max);
-        
-        ahat = abar - pinv(I + lam*R)*abar;
-        ahat = (ahat*128)/norm(ahat); %normalize the ahat
-
-        dist_n = sum(dist_v)/128); % find the mean distance of the pixel to transducer element
-        
-        pwr_rcb_img(ii,kk) = (4*pi*(dist_n^2)/(rho*c))/(ahat'*U*L*pinv((
-
-        
-    end
-end
+R = shifted' * shifted;
 
 %% Now perform RCB linalg, find lagrange multiplier
 R = double(R);
@@ -118,24 +83,16 @@ C = D * R * D;
 eps = 20;
 
 %lagrange multiplier
-[U, L] = eig(R);
-z_sumsq = transpose(U)*abar;
+[U, L] = eig(C);
 
 lam_max = (norm(abar)-sqrt(eps))/(L(128,128)*sqrt(eps));
 lam_min = (norm(abar)-sqrt(eps))/(L(1,1)*sqrt(eps));
 lam0 = [lam_min lam_max]; %initial lambda interval
-fun = @(lam)sum(z_sumsq.^2./((1+(lam*L)).^2))-eps; % eqn (24)
-lam = lsqnonlin(fun,(lam_min+lam_max)/2,lam_min,lam_max);
+fun = @(lam)norm(pinv(I+lam*R)*abar).^2-eps;
+lam = lsqnonlin(fun,0.1,0.00006,0.6515);
+% fzero to solve roots, much better than Newton's method
 
 %% solve steering vector, weight vector
 
 ahat = abar - pinv(I + lam*R)*abar;
-%normalize the ahat
-ahat = (ahat*128)/norm(ahat);
-w = (pinv(R)*ahat)/(conj(ahat)'*pinv(R)*ahat);
-
-%% apply your weight vector to the data
-
-for ii = 1:4096
-   image(ii,:) = w.*shifted(:,ii); 
-end
+w = pinv(R)*ahat./(conj(ahat)*pinv(R)*ahat);

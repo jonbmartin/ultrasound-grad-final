@@ -64,28 +64,45 @@ end
 
 %% Shift Data with Appropriate Time Delays and Create Power Spectrum
 delayed_channel = zeros(size(RData,1),nChannels);   % Create array to store delayed data
-pow_spec = zeros(length(x),length(z));              % Create array to store power spectrum data
+pow_specNO = zeros(length(x),length(z));            % Create array to store power spectrum data without apodization
+pow_spec = zeros(length(x),length(z));              % Create array to store power spectrum data with apodization
 
-for i = 1:length(x)
-    for k = 1:length(z)
-        for w = 1:nChannels
-            % Delay data by interpolating
-            delayed_channel(:,w) = Sl*interp1(Time',RData(:,w),Time'+tof(k,i,w),'linear',0);   
-            
-            % Apply cosine apodization
-            cosmat = squeeze(repmat(costheta(k,i,:),[size(RData,1),1])); % Form cosine apodization matrix if applying cosine apodization
-            delayed_channel = delayed_channel.*cosmat;                   % Apply cosine apodization
-            
+for a = 1:2
+    for i = 1:length(x)
+        for k = 1:length(z)
+            for w = 1:nChannels
+                % Delay data by interpolating
+                delayed_channel(:,w) = Sl*interp1(Time',RData(:,w),Time'+tof(k,i,w),'linear',0);   
+
+                if a == 2
+                % Apply cosine apodization
+                cosmat = squeeze(repmat(costheta(k,i,:),[size(RData,1),1])); % Form cosine apodization matrix if applying cosine apodization
+                delayed_channel = delayed_channel.*cosmat;                   % Apply cosine apodization
+                end
+            end
+            if a == 2
+                pow_specNO(i,k) = sum(abs(sum(delayed_channel,2)).^2);
+            else
+                pow_spec(i,k) = sum(abs(sum(delayed_channel,2)).^2);
+            end
+            fprintf('Done processing: [%i,%i]\n', i,k);
         end
-        pow_spec(i,k) = sum(abs(sum(delayed_channel,2)).^2);
-        fprintf('Done processing: [%i,%i]\n', i,k);
     end
 end
 
-%% Show PAM Image
+%% Show PAM Images Comparing with and without Apodization
+subplot(121);
+imagesc(x,z,pow_specNO');
+title('Simulated Data - No Apodization');
+xlabel('Lateral Location [mm]'); 
+ylabel('Range Location [mm]'); % Add axis labels
+axis('image');
+colorbar;
+
 subplot(122);
 imagesc(x,z,pow_spec');
 title('Simulated Data - Cosine Apodization');
 xlabel('Lateral Location [mm]'); 
 ylabel('Range Location [mm]'); % Add axis labels
 axis('image');
+colorbar;

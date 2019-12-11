@@ -73,32 +73,72 @@ end
 delayed_channel = zeros(size(RData,1),nChannels);
 pow_spec = zeros(length(x),length(z));
 full_spec = zeros(NFramesAnalyze,length(x),length(z));
+full_specNO = zeros(NFramesAnalyze,length(x),length(z));
 
-for iFrm = 8%NFrameStart:NFrameStart+(NFramesAnalyze-1)
-    for i = 1:length(x)
-        for k = 1:length(z)
+for a = 1:2
+    for iFrm = NFrameStart:NFrameStart+(NFramesAnalyze-1)
+        for i = 1:length(x)
+            for k = 1:length(z)
                 for w = 1:nChannels
                     delayed_channel(:,w) = Sl*interp1(Time',double(RData(:,w,iFrm)),Time'+tof(k,i,w),'linear',0);           
                 end
                 
-                % Apply cosine apodization
-                cosmat = squeeze(repmat(costheta(k,i,:),[size(RData,1),1])); % Form cosine apodization matrix if applying cosine apodization
-                delayed_channel = delayed_channel.*cosmat;                % Apply cosine apodization
-          
+                if a == 2
+                    % Apply cosine apodization
+                    cosmat = squeeze(repmat(costheta(k,i,:),[size(RData,1),1])); % Form cosine apodization matrix if applying cosine apodization
+                    delayed_channel = delayed_channel.*cosmat;                   % Apply cosine apodization
+                end
+                
                 pow_spec(i,k) = sum(abs(sum(delayed_channel,2)).^2);
                 fprintf('Done processing frame #%i: [%i,%i]\n', iFrm, i, k);
+            end
+        end
+        if a == 1
+            full_specNO(iFrm,:,:) = pow_spec;
+        else
+            full_spec(iFrm,:,:) = pow_spec;
         end
     end
-    full_spec(iFrm,:,:) = pow_spec;
 end
 
 %% Show PAM Image
-test = squeeze(mean(full_spec,1));
+nocav = squeeze(mean(full_specNO,1));
+cav = squeeze(mean(full_spec,1));
 
 % figure;
 subplot(121);
-imagesc(x,z,test');
+imagesc(x,z,nocav');
+title('Experimental Data - No Apodization');
+xlabel('Lateral Location [mm]'); 
+ylabel('Range Location [mm]'); % Add axis labels
+axis('image');
+colorbar;
+
+% figure;
+subplot(122);
+imagesc(x,z,cav');
 title('Experimental Data - Cosine Apodization');
 xlabel('Lateral Location [mm]'); 
 ylabel('Range Location [mm]'); % Add axis labels
 axis('image');
+colorbar;
+
+%% Look at each frame
+for i = 1:size(full_spec,1)
+    subplot(121);
+    imagesc(x,z,squeeze(full_specNO(i,:,:))');
+    title('Experimental Data - No Apodization');
+    xlabel('Lateral Location [mm]'); 
+    ylabel('Range Location [mm]'); % Add axis labels
+    axis('image');
+    colorbar;
+
+    subplot(122);
+    imagesc(x,z,squeeze(full_spec(i,:,:))');
+    title('Experimental Data - Cosine Apodization');
+    xlabel('Lateral Location [mm]'); 
+    ylabel('Range Location [mm]'); % Add axis labels
+    axis('image');
+    colorbar;
+    pause(0.3);
+end

@@ -2,7 +2,7 @@
 % implement das
 % will write my own to make sure I get this 
 
-load('test_data/SimData.mat')
+load('test_data/ExpData.mat')
 
 %% Define grid to image along with a few other properties
 % Specific pixel locations
@@ -37,7 +37,7 @@ TotalTimeI = size(RData,1);     % The total time duration of the simulated recei
 Time = (0:TotalTimeI-1)*dt;     % Time vector
 fk = linspace(-fs/2,fs/2-1/(TotalTimeI/fs),TotalTimeI); % Discrete frequency vector, equal to k*Delta-f
 
-%% Optimization woop woop!
+%% Optimization
 %Part 1 : Robust Capon estimation of optimal steering vector
 
 abar = ones(size(Aperture)); %nominal steering vector
@@ -87,7 +87,7 @@ for ii = 1:length(xloc)
         dist_v = squeeze(d(ii,kk,:));
         shifted_data = zeros(128, size(RData,1) + 1);
         for jj = 1:nChannels
-            shifted_data(jj,:) = shifted_data(jj,:) + RData(jj,1+time2ind(jj):end) zeros(1, time2ind(jj)+1)]; % shift the pixels up by the number calculated in time2ind and zero pad rest
+            shifted_data(jj,:) = shifted_data(jj,:) + [RData(1+time2ind(jj):end,jj)' zeros(1, time2ind(jj)+1)]; % shift the pixels up by the number calculated in time2ind and zero pad rest
         end
         
         R = double(shifted_data * shifted_data'); % calculate covariance Rs
@@ -97,15 +97,17 @@ for ii = 1:length(xloc)
         lam_max = (norm(abar)-sqrt(eps))/(L(128,128)*sqrt(eps));
         lam_min = (norm(abar)-sqrt(eps))/(L(1,1)*sqrt(eps));
         lam0 = [lam_min lam_max]; %initial lambda interval
-        fun = @(lam)sum(z_sumsq.^2./((1+(lam*L)).^2))-eps; % eqn (24)
-        lam = lsqnonlin(fun,(lam_min+lam_max)/2,lam_min,lam_max);
+        fun = @(lam)sum(sum(z_sumsq.^2./((1+(lam*L)).^2)))-eps; % eqn (24)
+        %lam = lsqnonlin(fun,(lam_min+lam_max)/2,lam_min,lam_max);
+        lam = fminsearch(fun,(lam_min+lam_max)/2);
         
+        I = eye(nChannels);
         ahat = abar - pinv(I + lam*R)*abar;
         ahat = (ahat*128)/norm(ahat); %normalize the ahat
 
-        dist_n = sum(dist_v)/128); % find the mean distance of the pixel to transducer element
+        dist_n = sum(dist_v)/128; % find the mean distance of the pixel to transducer element
         
-        pwr_rcb_img(ii,kk) = (4*pi*(dist_n^2)/(rho*c))/(ahat'*U*L*pinv((
+        pwr_rcb_img(ii,kk) = (4*pi*(dist_n^2)/(rho*c))/(ahat'*U*L*pinv((lam^-2*eye(128))+(2*lam^-1*L)+(L^2))*transpose(U)*ahat);
 
         
     end

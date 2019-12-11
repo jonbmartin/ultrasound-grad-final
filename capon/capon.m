@@ -1,21 +1,13 @@
 %% It turns out my portion of project requires das
 % implement das
 % will write my own to make sure I get this 
-
-load('test_data/SimData.mat')
+% clear all
+% load('test_data/ExpData.mat')
+% RData = double(RData(:,:,50));
+clear all
+load('test_data/SimData.mat');
 
 %% Define grid to image along with a few other properties
-% Specific pixel locations
-xloc = -9:0.3:9;           % Lateral location of pixels in mm
-zloc = 10:1:40;            % depth location of pixel in mm
-
-ncycles = 20;           % Number of cycles in simulated data
-Fo = 6;                 % Center frequency of simulated data in MHz
-
-% Material Properties; Do not change these parameters if loading data
-c = 1.5236;             % speed of sound in mm/us
-rho = 1e-9;             % density of water in kg/mm^3
-
 % Transducer Properties; Do not change these parameters if loading data 
 nChannels = 128;        % Number of channels that simultaneously and passively acquired acoustic emissions
 ElementPitch = 0.2980;  % Spacing between L7-4 array elements in mm
@@ -26,9 +18,20 @@ EleWidth = 0.25;        % Element width in mm
 Sl = EleHeight*EleWidth; % Element surface area in mm^2
 S = Sl*nChannels;       % Active area of array in mm^2
 
+% Specific pixel locations
+xloc = Aperture(34):ElementPitch/1:Aperture(95);	% Lateral location of pixels in mm
+zloc = 10:1:40;            % depth location of pixel in mm
+
+ncycles = 20;           % Number of cycles in simulated data
+Fo = 6;                 % Center frequency of simulated data in MHz
+
+% Material Properties; Do not change these parameters if loading data
+c = 1.5236;             % speed of sound in mm/us
+rho = 1e-9;             % density of water in kg/mm^3
+
 % Received Data Properties; Do not change these parameters if loading data 
 T = 30;                 % Nominal duration of the recorded emission in us
-fs = 40;                % Sampling frequency in MHz
+fs = 20;                % Sampling frequency in MHz
 dt = 1/fs;              % Sampling period in us
 NIOI = round(fs/Fo*ncycles); % Number of points in the interval of interest
 TIOI = NIOI*dt;         % Time duration of interval of interest in us
@@ -36,8 +39,7 @@ TIOI = NIOI*dt;         % Time duration of interval of interest in us
 TotalTimeI = size(RData,1);     % The total time duration of the simulated received signal (in indicies)
 Time = (0:TotalTimeI-1)*dt;     % Time vector
 fk = linspace(-fs/2,fs/2-1/(TotalTimeI/fs),TotalTimeI); % Discrete frequency vector, equal to k*Delta-f
-
-%% Optimization woop woop!
+%% Optimization
 %Part 1 : Robust Capon estimation of optimal steering vector
 
 abar = ones(size(Aperture)); %nominal steering vector
@@ -99,7 +101,9 @@ for ii = 1:length(xloc)
         lam0 = [lam_min lam_max]; %initial lambda interval
         fun = @(lam)sum(z_sumsq.^2./((1+(lam*L)).^2))-eps; % eqn (24)
         lam = lsqnonlin(fun,(lam_min+lam_max)/2,lam_min,lam_max);
+        %lam = fminsearch(fun,(lam_min+lam_max)/2);
         
+        I = eye(nChannels);
         ahat = abar - pinv(I + lam*R)*abar;
         ahat = (ahat*128)/norm(ahat); %normalize the ahat
 
